@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orb-lint"
+version = "0.0.1"
+description = "Organization policy linter for circleci-orbs-mamono210 repositories"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+orb-lint = "orb_lint.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["orb_lint*"]

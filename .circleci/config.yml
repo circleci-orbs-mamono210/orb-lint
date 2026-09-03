@@ -1,0 +1,32 @@
+version: 2.1
+
+orbs:
+  orb-tools: circleci/orb-tools@11.1
+
+jobs:
+  python-tests:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: Install package
+          command: python -m pip install -e .
+      - run:
+          name: Run unit tests
+          command: python -m unittest discover -s tests -v
+      - run:
+          name: CLI smoke test
+          command: orb-lint tests/fixtures/orb001/pass
+
+workflows:
+  phase-1-1:
+    jobs:
+      - python-tests
+      - orb-tools/lint
+      - orb-tools/review:
+          # RC006 performs an anonymous HTTP 200 check against display.source_url.
+          # Keep the real source URL in @orb.yml, but skip this check while the
+          # repository is not publicly reachable.
+          exclude: RC006
+      - orb-tools/pack

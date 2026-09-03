@@ -1,0 +1,8 @@
+version: 2.1
+
+workflows:
+  release:
+    jobs:
+      - orb-tools/publish:
+          orb-name: orbss/example
+          context: <publishing-context>

@@ -1,0 +1,13 @@
+description: >
+  Run orb-lint against the checked-out Orb repository before merge.
+
+usage:
+  version: 2.1
+
+  orbs:
+    orb-lint: orbss/orb-lint@0.0.1
+
+  workflows:
+    lint-orb:
+      jobs:
+        - orb-lint/lint

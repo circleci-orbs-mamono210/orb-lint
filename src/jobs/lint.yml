@@ -1,0 +1,14 @@
+description: >
+  Check the checked-out repository with the production orb-lint CLI.
+
+docker:
+  - image: cimg/python:3.12
+
+steps:
+  - checkout
+  - run:
+      name: Install orb-lint
+      command: <<include(scripts/install.sh)>>
+  - run:
+      name: Run orb-lint
+      command: orb-lint .

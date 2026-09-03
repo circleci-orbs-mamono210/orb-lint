@@ -1,0 +1,8 @@
+version: 2.1
+
+description: >
+  Organization policy linter for CircleCI Orb repositories maintained by
+  circleci-orbs-mamono210.
+
+display:
+  source_url: https://github.com/circleci-orbs-mamono210/orb-lint

@@ -1,0 +1,7 @@
+version: 2.1
+
+workflows:
+  release:
+    jobs:
+      - orb-tools/publish:
+          context: CIRCLECI_ORBS
