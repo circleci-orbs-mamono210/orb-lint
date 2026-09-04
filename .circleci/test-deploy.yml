@@ -9,3 +9,22 @@ workflows:
       - orb-lint/lint:
           name: bootstrap-current-cli
           checker_ref: << pipeline.git.revision >>
+
+      - orb-lint/lint:
+          name: e2e-orb001-expected-failure
+          checker_ref: << pipeline.git.revision >>
+          pre-steps:
+            - run:
+                name: Configure ORB-001 expected failure
+                command: |
+                  echo 'export ORB_LINT_TARGET_PATH="tests/fixtures/orb001/fail"' >> "$BASH_ENV"
+                  echo 'export ORB_LINT_EXPECTED_EXIT_CODE="1"' >> "$BASH_ENV"
+
+      - orb-lint/lint:
+          name: e2e-invalid-checker-ref
+          checker_ref: "0000000000000000000000000000000000000000"
+          pre-steps:
+            - run:
+                name: Configure expected install failure
+                command: |
+                  echo 'export ORB_LINT_EXPECT_INSTALL_FAILURE="1"' >> "$BASH_ENV"

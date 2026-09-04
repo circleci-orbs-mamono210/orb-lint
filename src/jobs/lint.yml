@@ -24,4 +24,4 @@ steps:
       command: <<include(scripts/install.sh)>>
   - run:
       name: Run orb-lint
-      command: orb-lint .
+      command: <<include(scripts/run.sh)>>
