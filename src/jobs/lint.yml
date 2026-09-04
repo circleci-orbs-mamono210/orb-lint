@@ -1,5 +1,16 @@
 description: >
-  Check the checked-out repository with the production orb-lint CLI.
+  Check the checked-out repository with orb-lint. Production consumers use the
+  release-matched default CLI ref, while development pipelines may override
+  checker_ref with the immutable commit SHA under test.
+
+parameters:
+  checker_ref:
+    description: >
+      Git ref used to install the orb-lint CLI. Production consumers should
+      omit this parameter; version 0.0.1 defaults to release tag v0.0.1.
+      Development/test-deploy pipelines pass the current commit SHA.
+    type: string
+    default: v0.0.1
 
 docker:
   - image: cimg/python:3.12
@@ -8,6 +19,8 @@ steps:
   - checkout
   - run:
       name: Install orb-lint
+      environment:
+        ORB_LINT_CHECKER_REF: << parameters.checker_ref >>
       command: <<include(scripts/install.sh)>>
   - run:
       name: Run orb-lint

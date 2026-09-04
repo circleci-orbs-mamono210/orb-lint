@@ -1,7 +1,12 @@
 version: 2.1
+setup: true
 
 orbs:
   orb-tools: circleci/orb-tools@11.1
+
+filters: &filters
+  tags:
+    only: /.*/
 
 jobs:
   python-tests:
@@ -20,13 +25,32 @@ jobs:
           command: orb-lint tests/fixtures/orb001/pass
 
 workflows:
-  phase-1-1:
+  phase-1-2:
     jobs:
-      - python-tests
-      - orb-tools/lint
+      - python-tests:
+          filters: *filters
+      - orb-tools/lint:
+          filters: *filters
       - orb-tools/review:
-          # RC006 performs an anonymous HTTP 200 check against display.source_url.
-          # Keep the real source URL in @orb.yml, but skip this check while the
-          # repository is not publicly reachable.
           exclude: RC006
-      - orb-tools/pack
+          filters: *filters
+      - orb-tools/pack:
+          filters: *filters
+      - orb-tools/publish:
+          orb-name: orbss/orb-lint
+          vcs-type: << pipeline.project.type >>
+          pub-type: dev
+          enable-pr-comment: false
+          context: CIRCLECI_ORBS
+          requires:
+            - python-tests
+            - orb-tools/lint
+            - orb-tools/review
+            - orb-tools/pack
+          filters: *filters
+      - orb-tools/continue:
+          pipeline-number: << pipeline.number >>
+          vcs-type: << pipeline.project.type >>
+          requires:
+            - orb-tools/publish
+          filters: *filters

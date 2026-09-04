@@ -1,0 +1,11 @@
+version: 2.1
+
+orbs:
+  orb-lint: orbss/orb-lint@dev:<<pipeline.git.revision>>
+
+workflows:
+  test-deploy:
+    jobs:
+      - orb-lint/lint:
+          name: bootstrap-current-cli
+          checker_ref: << pipeline.git.revision >>
