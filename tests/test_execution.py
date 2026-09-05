@@ -58,7 +58,8 @@ class ExecutionTests(unittest.TestCase):
             },
             "multiple": {
                 "target": "multiple",
-                "rules": (("ORB-001", True, 3),),
+                # Two matching lines produce two findings, despite three placeholders.
+                "rules": (("ORB-001", True, 2),),
                 "lint_outcome": "violations",
                 "measurement_outcome": "succeeded",
             },
