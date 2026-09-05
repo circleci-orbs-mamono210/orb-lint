@@ -62,8 +62,73 @@ class ReleaseTagRulesetTests(unittest.TestCase):
 
     def test_management_tool_detects_missing_remote(self) -> None:
         tool = load_tool()
-        diff = tool.diff_remote(None, self.manifest)
-        self.assertEqual(diff, ["remote ruleset is missing"])
+        self.assertEqual(
+            tool.diff_remote(None, self.manifest),
+            ["remote ruleset is missing"],
+        )
+
+    def test_remote_omitted_update_parameters_match_false(self) -> None:
+        tool = load_tool()
+        remote = {
+            key: self.manifest[key]
+            for key in tool.COMPARISON_KEYS
+        }
+        remote["rules"] = [
+            {"type": "update"},
+            {"type": "deletion"},
+        ]
+        self.assertEqual(tool.diff_remote(remote, self.manifest), [])
+
+    def test_remote_explicit_false_update_parameter_matches(self) -> None:
+        tool = load_tool()
+        remote = {
+            key: self.manifest[key]
+            for key in tool.COMPARISON_KEYS
+        }
+        remote["rules"] = [
+            {
+                "type": "update",
+                "parameters": {
+                    "update_allows_fetch_and_merge": False,
+                },
+            },
+            {"type": "deletion"},
+        ]
+        self.assertEqual(tool.diff_remote(remote, self.manifest), [])
+
+    def test_remote_true_update_parameter_is_detected_as_drift(self) -> None:
+        tool = load_tool()
+        remote = {
+            key: self.manifest[key]
+            for key in tool.COMPARISON_KEYS
+        }
+        remote["rules"] = [
+            {
+                "type": "update",
+                "parameters": {
+                    "update_allows_fetch_and_merge": True,
+                },
+            },
+            {"type": "deletion"},
+        ]
+        differences = tool.diff_remote(remote, self.manifest)
+        self.assertEqual(len(differences), 1)
+        self.assertTrue(differences[0].startswith("rules:"))
+
+    def test_unknown_remote_rule_is_not_normalized_away(self) -> None:
+        tool = load_tool()
+        remote = {
+            key: self.manifest[key]
+            for key in tool.COMPARISON_KEYS
+        }
+        remote["rules"] = [
+            {"type": "update"},
+            {"type": "deletion"},
+            {"type": "creation"},
+        ]
+        differences = tool.diff_remote(remote, self.manifest)
+        self.assertEqual(len(differences), 1)
+        self.assertTrue(differences[0].startswith("rules:"))
 
 
 if __name__ == "__main__":

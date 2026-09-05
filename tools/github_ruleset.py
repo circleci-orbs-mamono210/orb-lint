@@ -83,12 +83,7 @@ def request(method: str, path: str, payload: dict | None = None) -> object:
         headers["Content-Type"] = "application/json"
 
     url = f"https://api.github.com{path}"
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers=headers,
-        method=method,
-    )
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req) as response:
             raw = response.read()
@@ -111,10 +106,7 @@ def list_repository_rulesets() -> list[dict]:
 
 
 def get_ruleset(ruleset_id: int) -> dict:
-    result = request(
-        "GET",
-        f"/repos/{REPOSITORY}/rulesets/{ruleset_id}",
-    )
+    result = request("GET", f"/repos/{REPOSITORY}/rulesets/{ruleset_id}")
     if not isinstance(result, dict):
         raise RuntimeError("unexpected ruleset response")
     return result
@@ -136,8 +128,40 @@ def find_ruleset() -> dict | None:
     return get_ruleset(int(matches[0]["id"]))
 
 
+def normalize_rule(rule: dict) -> dict:
+    """Canonicalize GitHub's ruleset response for contract comparison."""
+    rule_type = rule.get("type")
+
+    if rule_type == "update":
+        parameters = rule.get("parameters")
+        if not isinstance(parameters, dict):
+            parameters = {}
+        return {
+            "type": "update",
+            "parameters": {
+                "update_allows_fetch_and_merge": parameters.get(
+                    "update_allows_fetch_and_merge",
+                    False,
+                )
+            },
+        }
+
+    if rule_type == "deletion":
+        return {"type": "deletion"}
+
+    # Preserve unexpected rules so drift is still detected.
+    return dict(rule)
+
+
 def normalized(data: dict) -> dict:
-    return {key: data.get(key) for key in COMPARISON_KEYS}
+    result = {key: data.get(key) for key in COMPARISON_KEYS}
+    rules = result.get("rules")
+    if isinstance(rules, list):
+        result["rules"] = [
+            normalize_rule(rule) if isinstance(rule, dict) else rule
+            for rule in rules
+        ]
+    return result
 
 
 def diff_remote(remote: dict | None, desired: dict) -> list[str]:
@@ -209,11 +233,7 @@ def command_apply(args: argparse.Namespace) -> int:
         return 2
 
     if remote is None:
-        result = request(
-            "POST",
-            f"/repos/{REPOSITORY}/rulesets",
-            desired,
-        )
+        result = request("POST", f"/repos/{REPOSITORY}/rulesets", desired)
         print(f"Created ruleset id={result['id']}.")
     else:
         result = request(
