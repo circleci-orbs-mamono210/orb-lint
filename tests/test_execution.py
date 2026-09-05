@@ -11,6 +11,20 @@ FIXTURES = Path(__file__).parent / "fixtures" / "orb001"
 
 
 class ExecutionTests(unittest.TestCase):
+    def _semantic_baseline(self, result, *, target_id: str) -> dict[str, object]:
+        self.assertEqual(result.measurement.outcome, "succeeded")
+        measurement = result.measurement.value
+        self.assertIsNotNone(measurement)
+        return {
+            "target": target_id,
+            "rules": tuple(
+                (rule.rule_id, rule.evaluated, rule.finding_count)
+                for rule in measurement.rules
+            ),
+            "lint_outcome": measurement.lint_outcome,
+            "measurement_outcome": result.measurement.outcome,
+        }
+
     def test_existing_zero_and_single_finding_inputs_are_measured(self) -> None:
         for fixture, count, outcome in (("pass", 0, "passed"), ("fail", 1, "violations")):
             with self.subTest(fixture=fixture):
@@ -27,6 +41,79 @@ class ExecutionTests(unittest.TestCase):
                 self.assertTrue(rules[0].evaluated)
                 self.assertEqual(rules[0].finding_count, count)
                 self.assertEqual(result.evaluation.findings, tuple(check_orb001(target)))
+
+    def test_representative_measurement_baseline(self) -> None:
+        expected = {
+            "pass": {
+                "target": "pass",
+                "rules": (("ORB-001", True, 0),),
+                "lint_outcome": "passed",
+                "measurement_outcome": "succeeded",
+            },
+            "fail": {
+                "target": "fail",
+                "rules": (("ORB-001", True, 1),),
+                "lint_outcome": "violations",
+                "measurement_outcome": "succeeded",
+            },
+            "multiple": {
+                "target": "multiple",
+                # Two matching lines produce two findings, despite three placeholders.
+                "rules": (("ORB-001", True, 2),),
+                "lint_outcome": "violations",
+                "measurement_outcome": "succeeded",
+            },
+        }
+
+        actual = {
+            fixture: self._semantic_baseline(
+                _run_repository(FIXTURES / fixture), target_id=fixture
+            )
+            for fixture in ("pass", "fail")
+        }
+
+        with TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / ".circleci").mkdir()
+            (target / ".circleci" / "config.yml").write_text(
+                "first: <publishing-context> <publishing-context>\n"
+                "second: <publishing-context>\n",
+                encoding="utf-8",
+            )
+            actual["multiple"] = self._semantic_baseline(
+                _run_repository(target), target_id="multiple"
+            )
+
+        self.assertEqual(actual, expected)
+
+    def test_representative_measurement_baseline_is_repeatable(self) -> None:
+        for fixture in ("pass", "fail"):
+            with self.subTest(fixture=fixture):
+                target = FIXTURES / fixture
+                first = self._semantic_baseline(
+                    _run_repository(target), target_id=fixture
+                )
+                second = self._semantic_baseline(
+                    _run_repository(target), target_id=fixture
+                )
+                self.assertEqual(first, second)
+
+        with TemporaryDirectory() as directory:
+            target = Path(directory)
+            (target / ".circleci").mkdir()
+            (target / ".circleci" / "config.yml").write_text(
+                "first: <publishing-context> <publishing-context>\n"
+                "second: <publishing-context>\n",
+                encoding="utf-8",
+            )
+            first = self._semantic_baseline(
+                _run_repository(target), target_id="multiple"
+            )
+            second = self._semantic_baseline(
+                _run_repository(target), target_id="multiple"
+            )
+
+        self.assertEqual(first, second)
 
     def test_multiple_files_count_findings_not_placeholder_occurrences(self) -> None:
         with TemporaryDirectory() as directory:
