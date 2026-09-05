@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
-from orb_lint.rules.orb001 import check_orb001
+from orb_lint._execution import _run_repository
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,7 +25,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     repository = Path(args.repository).resolve()
 
-    findings = check_orb001(repository)
+    execution = _run_repository(repository)
+    findings = execution.evaluation.findings
     if not findings:
         print("orb-lint: OK")
         return 0
