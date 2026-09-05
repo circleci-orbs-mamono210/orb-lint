@@ -1,0 +1,12 @@
+# Phase 1-4 consumer spike example.
+# Merge these fragments into one existing consumer repository's CircleCI config.
+# Production consumers must use the release-matched default CLI ref.
+version: 2.1
+
+orbs:
+  orb-lint: orbss/orb-lint@0.0.1
+
+workflows:
+  phase-1-4-orb-lint-spike:
+    jobs:
+      - orb-lint/lint
