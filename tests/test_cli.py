@@ -72,14 +72,20 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(errors.getvalue(), "")
 
     def test_evaluation_error_is_not_converted_to_cli_success(self) -> None:
-        output = StringIO()
+        # Phase 3-1 / #5376 changed this public contract: an unclassified
+        # evaluation error is now an operational failure (exit 2) instead of an
+        # unhandled traceback. It is still never reported as a clean repository,
+        # and never as a repository failure (exit 1).
+        output, errors = StringIO(), StringIO()
         failure = OSError("lint input could not be read")
         with patch("orb_lint._execution.check_orb001", side_effect=failure):
-            with redirect_stdout(output):
-                with self.assertRaises(OSError) as caught:
-                    main([str(FIXTURES / "pass")])
-        self.assertIs(caught.exception, failure)
+            with redirect_stdout(output), redirect_stderr(errors):
+                code = main([str(FIXTURES / "pass")])
+
+        self.assertEqual(code, 2)
         self.assertEqual(output.getvalue(), "")
+        self.assertIn("operational failure", errors.getvalue())
+        self.assertNotIn("ORB-", errors.getvalue())
 
 
 if __name__ == "__main__":
