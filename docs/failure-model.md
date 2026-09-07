@@ -88,12 +88,11 @@ as a clean repository — and `tests/test_cli.py` records the change explicitly.
 
 ### Not in this Phase
 
-- the `.orb-lint.yml` schema, ignore contract, and `expires` semantics (#5377);
 - JSON serialization and its schema (Phase 3-3);
 - GitHub or CircleCI API access, required checks, and audit state;
 - promoting rules to error severity for enforcement (Phase 5);
 - auto-fix.
 
-`orb_lint/_configuration.py` therefore validates only that a present
-configuration file is readable. It does not parse YAML, so that Phase 3-2 can
-define the authoritative parser without first removing a provisional one.
+`orb_lint/configuration.py` owns the authoritative interpretation of
+`.orb-lint.yml`, including its schema and semantic validation. Every rejection
+it makes surfaces as `INPUT-002`. See `docs/configuration-contract.md`.

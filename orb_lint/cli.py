@@ -43,7 +43,8 @@ def _run(argv: Sequence[str] | None) -> int:
     repository = Path(args.repository).resolve()
 
     execution = _run_repository(repository)
-    findings = execution.evaluation.findings
+    # Ignored findings are recorded on the result, not enforced or printed.
+    findings = execution.active_findings
 
     for finding in findings:
         print(
