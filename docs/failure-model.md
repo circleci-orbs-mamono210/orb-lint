@@ -7,7 +7,8 @@ is not a rule finding.
 Origin: Phase 3-1 / Redmine #5376, under Phase 3 / #5380.
 Related work: configuration and ignore semantics are Phase 3-2 / #5377;
 serialization is Phase 3-3 / #5378 (`docs/adr/0014-json-schema-v1.md`);
-integration verification is Phase 3-4 / #5379.
+integration verification is Phase 3-4 / #5379
+(`docs/phase-3-4-verification.md`).
 Repository location: `docs/failure-model.md`.
 
 ### Exit codes

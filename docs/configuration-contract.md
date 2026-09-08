@@ -9,7 +9,7 @@ ignored-finding reporting, dependency policy).
 Related work: failure classification is Phase 3-1 / #5376 in
 `docs/failure-model.md`; serialization is Phase 3-3 / #5378 in
 `docs/adr/0014-json-schema-v1.md`; integration verification is Phase 3-4 /
-#5379.
+#5379 in `docs/phase-3-4-verification.md`.
 Design decision: `docs/adr/0004-configuration-and-ignore-contract.md`.
 Repository location: `docs/configuration-contract.md`.
 
