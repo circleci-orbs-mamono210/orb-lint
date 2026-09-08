@@ -11,6 +11,9 @@ refers to ADR-001 through ADR-003, but no such records exist here. The number
 `0004` is kept because #5377 names it, and this file establishes the directory.
 Whether the earlier records should be reconstructed or renumbered is left open.
 
+Update (2026-09-08, Redmine #5385): ADR-001 through ADR-003 were reconstructed
+from the Roadmap and the completed Phase 1–3 tickets, keeping this number.
+
 ## Context
 
 Phase 3-2 makes `.orb-lint.yml` a public contract. Two questions had to be
