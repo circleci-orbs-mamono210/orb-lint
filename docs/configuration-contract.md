@@ -7,8 +7,9 @@ Origin: Phase 3-2 / Redmine #5377, under Phase 3 / #5380.
 Refined by: Phase 3-2-1 / #5384 (ownership boundary, exact-path reservation,
 ignored-finding reporting, dependency policy).
 Related work: failure classification is Phase 3-1 / #5376 in
-`docs/failure-model.md`; serialization is Phase 3-3; integration verification is
-Phase 3-4 / #5379.
+`docs/failure-model.md`; serialization is Phase 3-3 / #5378 in
+`docs/adr/0014-json-schema-v1.md`; integration verification is Phase 3-4 /
+#5379.
 Design decision: `docs/adr/0004-configuration-and-ignore-contract.md`.
 Repository location: `docs/configuration-contract.md`.
 
@@ -132,8 +133,9 @@ Ignoring is an enforcement concern. It is applied after evaluation, so:
   suppressed it.
 
 An ignore suppresses enforcement; it does not erase the record that the finding
-occurred, and it does not hide it from the reader either. Phase 3-3 surfaces
-ignored findings in the JSON output.
+occurred, and it does not hide it from the reader either. With `--format json`
+the finding is emitted with `ignored: true`, `ignore_reason`, and
+`ignore_expires` (ADR-014).
 
 ### Human-readable reporting of ignored findings
 

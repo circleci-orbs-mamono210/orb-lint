@@ -6,7 +6,8 @@ is not a rule finding.
 
 Origin: Phase 3-1 / Redmine #5376, under Phase 3 / #5380.
 Related work: configuration and ignore semantics are Phase 3-2 / #5377;
-serialization is Phase 3-3; integration verification is Phase 3-4 / #5379.
+serialization is Phase 3-3 / #5378 (`docs/adr/0014-json-schema-v1.md`);
+integration verification is Phase 3-4 / #5379.
 Repository location: `docs/failure-model.md`.
 
 ### Exit codes
@@ -58,6 +59,11 @@ rules is Phase 5 work, not this Phase's.
 Warning-severity findings are still printed. Only the exit code differs.
 
 ### Output streams
+
+The rules below describe the default `--format text`. With `--format json`
+(Phase 3-3 / #5378, ADR-014) stdout carries exactly one JSON document and
+nothing else; diagnostics and operational failures still go to stderr, and on
+exit `2` stdout is empty. Exit codes are identical in both formats.
 
 - Findings are printed to stdout, in the existing
   `path:line: RULE-ID: message` format. An ignored finding is printed too,
