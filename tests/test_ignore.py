@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 from orb_lint._execution import _run_repository
 from orb_lint.cli import main
-from orb_lint.configuration import CONFIGURATION_FILENAME
+from orb_lint._configuration import CONFIGURATION_FILENAME
 from orb_lint.failure import EXIT_OK, EXIT_REPOSITORY
-from orb_lint.rules.orb001 import RULE_ID
+from orb_lint.rules.orb001 import MESSAGE, RULE_ID
 
 
 PLACEHOLDER = "context: <publishing-context>\n"
@@ -54,7 +54,15 @@ class RuleLevelIgnoreTests(IgnoreTestCase):
             code, out, err = self._run(target)
 
         self.assertEqual(code, EXIT_OK)
-        self.assertEqual(out, "orb-lint: OK\n")
+        # Ignored findings stay visible (#5384): suppression is not deletion.
+        self.assertEqual(
+            out,
+            f"{PROD}:1: {RULE_ID}: {MESSAGE}\n"
+            f"  ignored: permanent\n"
+            f"{DEV}:1: {RULE_ID}: {MESSAGE}\n"
+            f"  ignored: permanent\n"
+            f"orb-lint: OK (2 ignored findings)\n",
+        )
         self.assertEqual(err, "")
 
     def test_ignoring_another_rule_leaves_this_rule_active(self) -> None:
@@ -91,8 +99,15 @@ class PathScopedIgnoreTests(IgnoreTestCase):
             code, out, _ = self._run(target)
 
         self.assertEqual(code, EXIT_REPOSITORY)
-        self.assertIn(PROD, out)
-        self.assertNotIn(DEV, out)
+        # The active finding is printed as before; the ignored one is printed
+        # too, but marked, and it does not earn the OK line.
+        self.assertEqual(
+            out,
+            f"{PROD}:1: {RULE_ID}: {MESSAGE}\n"
+            f"{DEV}:1: {RULE_ID}: {MESSAGE}\n"
+            f"  ignored: development bootstrap only\n",
+        )
+        self.assertNotIn("orb-lint: OK", out)
 
     def test_production_config_keeps_the_same_rule_active(self) -> None:
         with TemporaryDirectory() as directory:
@@ -122,7 +137,12 @@ class PathScopedIgnoreTests(IgnoreTestCase):
             code, out, _ = self._run(target)
 
         self.assertEqual(code, EXIT_OK)
-        self.assertEqual(out, "orb-lint: OK\n")
+        self.assertEqual(
+            out,
+            f"{DEV}:1: {RULE_ID}: {MESSAGE}\n"
+            f"  ignored: development bootstrap only\n"
+            f"orb-lint: OK (1 ignored finding)\n",
+        )
 
 
 class ExpiryTests(IgnoreTestCase):
@@ -149,7 +169,13 @@ class ExpiryTests(IgnoreTestCase):
             code, out, _ = self._run_on(target, today)
 
         self.assertEqual(code, EXIT_OK)
-        self.assertEqual(out, "orb-lint: OK\n")
+        self.assertEqual(
+            out,
+            f"{PROD}:1: {RULE_ID}: {MESSAGE}\n"
+            f"  ignored: temporary\n"
+            f"  expires: 2026-12-31\n"
+            f"orb-lint: OK (1 ignored finding)\n",
+        )
 
     def test_ignore_is_active_on_its_expiry_date(self) -> None:
         expires = date(2026, 12, 31)
@@ -248,3 +274,57 @@ class MeasurementBoundaryTests(IgnoreTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IgnoredFindingReportingTests(IgnoreTestCase):
+    """Phase 3-2-1 / #5384: ignored findings are reported, not hidden."""
+
+    def _ignored_only(self, directory: str) -> Path:
+        return self._repository(
+            directory,
+            files=(DEV,),
+            configuration=(
+                f"ignore:\n"
+                f"  - rule: {RULE_ID}\n"
+                f"    path: {DEV}\n"
+                f"    reason: development bootstrap only\n"
+            ),
+        )
+
+    def test_clean_repository_output_is_unchanged(self) -> None:
+        with TemporaryDirectory() as directory:
+            target = self._repository(directory, files=())
+            code, out, err = self._run(target)
+
+        self.assertEqual(code, EXIT_OK)
+        self.assertEqual(out, "orb-lint: OK\n")
+        self.assertEqual(err, "")
+
+    def test_ignored_only_is_distinguishable_from_clean(self) -> None:
+        with TemporaryDirectory() as directory:
+            code, out, err = self._run(self._ignored_only(directory))
+
+        self.assertEqual(code, EXIT_OK)
+        self.assertNotEqual(out, "orb-lint: OK\n")
+        self.assertIn("  ignored: development bootstrap only\n", out)
+        self.assertTrue(out.endswith("orb-lint: OK (1 ignored finding)\n"))
+        self.assertEqual(err, "")
+
+    def test_ignored_finding_stays_in_measurement(self) -> None:
+        with TemporaryDirectory() as directory:
+            result = _run_repository(self._ignored_only(directory))
+
+        self.assertEqual(result.active_findings, ())
+        self.assertEqual(len(result.ignored_findings), 1)
+        rule = next(
+            r for r in result.measurement.value.rules if r.rule_id == RULE_ID
+        )
+        self.assertEqual(rule.finding_count, 1)
+
+    def test_output_is_deterministic_across_runs(self) -> None:
+        with TemporaryDirectory() as directory:
+            target = self._ignored_only(directory)
+            first = self._run(target)
+            second = self._run(target)
+
+        self.assertEqual(first, second)

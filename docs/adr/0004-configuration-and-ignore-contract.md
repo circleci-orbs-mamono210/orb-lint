@@ -1,8 +1,10 @@
 # ADR-004: Configuration ownership and ignore path matching
 
-- Status: accepted
+- Status: accepted; the "Ownership" decision was amended on 2026-09-08 (see
+  "Amendments" at the end)
 - Date: 2026-09-08
 - Origin: Phase 3-2 / Redmine #5377, under Phase 3 / #5380
+- Amended by: Phase 3-2-1 / Redmine #5384
 
 ## Note on numbering
 
@@ -29,6 +31,9 @@ The ticket also required that no unverified glob library be assumed.
 ## Decision
 
 ### Ownership
+
+> Amended by #5384: the module is now private. The text below is the original
+> decision, kept for traceability; the current position is under "Amendments".
 
 `orb_lint/configuration.py` is the single authoritative implementation, and it
 is public. `orb-lint-audit` must import it rather than reimplement parsing,
@@ -92,3 +97,72 @@ Ranking could be added later if a real case calls for it.
 - `PyYAML` becomes a runtime dependency of the CLI, since `.orb-lint.yml` is
   YAML and hand-parsing a subset would create exactly the second interpretation
   this decision exists to prevent.
+
+## Amendments
+
+### 2026-09-08 — Phase 3-2-1 / #5384
+
+Four points were settled before the Phase 3-3 JSON contract is defined on top
+of this one. Nothing about path matching, expiry, or multiple-match attribution
+changed.
+
+#### 1. Ownership: the implementation is private
+
+**Original decision.** `orb_lint/configuration.py` is public and deliberately
+carries no leading underscore, so that `orb-lint-audit` can import it.
+
+**Amended decision.** The module is renamed `orb_lint/_configuration.py`. It
+remains the single authoritative implementation, and audit must still never
+reimplement its semantics. But its module path, classes, and functions are not
+a stable public Python API. The public contract is the meaning of
+`.orb-lint.yml`, documented in `docs/configuration-contract.md`. When
+`orb-lint-audit` exists and its needs are known, Phase 6 will define the
+narrow public facade it requires on top of this module.
+
+**Why the change.** The original decision conflated two things: "there is one
+authoritative implementation" and "that implementation is a stable API". The
+first is the architecture boundary the Roadmap requires. The second is a
+compatibility promise about specific Python symbols, made before any consumer
+exists to say which symbols it needs. Making the promise now would freeze
+`Configuration`, `IgnoreRule`, and `load_configuration` as they happen to be
+today; making it in Phase 6, against a real consumer, freezes only what is
+actually used. Reversing a public-to-private change after audit has started
+importing the module would be harder than doing it now, which is why the
+amendment is made in Phase 3 rather than deferred.
+
+#### 2. Path: exact match is a compatibility boundary
+
+The original decision already chose exact matching and noted that globs could
+be added later as an additive change. What was left implicit is now explicit:
+adding pattern matching must never change the meaning of the existing `path`
+field. If it is needed, it will be a separately named field.
+
+To keep that door open, `path` now rejects the characters `*`, `?`, and `[`
+with `INPUT-002`. Previously a validator would have accepted `src/*.yml` as a
+literal filename; had any repository done that, a later pattern field could
+not have been introduced without asking whether such entries meant the literal
+or the pattern.
+
+#### 3. Ignored findings are reported, not hidden
+
+The original implementation recorded ignored findings on the execution result
+but printed nothing for them, so an ignored-only repository produced the same
+stdout as a clean one. That contradicted the boundary this ADR already stated:
+an ignore suppresses enforcement, it does not erase the finding.
+
+Every finding is now printed. An ignored one is followed by `ignored: <reason>`
+and, when present, `expires: <date>`. The `orb-lint: OK` line carries an
+ignored count when the count is nonzero, and is byte-identical to Phase 2 when
+it is zero. Exit codes are unchanged. The exact format is in
+`docs/configuration-contract.md`. Whether the JSON output carries the reason
+and expiry as fields is a Phase 3-3 decision and is not fixed here.
+
+#### 4. PyYAML dependency policy
+
+The original "Consequences" noted that PyYAML becomes a runtime dependency.
+The version range is now `PyYAML>=6.0,<7`: the lower bound is what the code
+uses, the upper bound is what CI verifies. Determinism across installs matters
+more than picking up an untested major automatically. Raising the bound is a
+deliberate change accompanied by a passing test run. No YAML parser is written
+in-house; that would create exactly the second interpretation this ADR exists
+to prevent.

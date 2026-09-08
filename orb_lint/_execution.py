@@ -12,7 +12,7 @@ from orb_lint._measurement import (
     _RuleEvaluation,
     _measure,
 )
-from orb_lint.configuration import (
+from orb_lint._configuration import (
     Configuration,
     IgnoreRule,
     _today,

@@ -60,12 +60,16 @@ Warning-severity findings are still printed. Only the exit code differs.
 ### Output streams
 
 - Findings are printed to stdout, in the existing
-  `path:line: RULE-ID: message` format.
+  `path:line: RULE-ID: message` format. An ignored finding is printed too,
+  followed by indented `ignored:` / `expires:` lines; see
+  `docs/configuration-contract.md`.
 - Diagnostics are printed to stderr, as `path: INPUT-ID: message`.
 - Operational failures are printed to stderr and identify the failing exception
   class.
-- `orb-lint: OK` is printed only when there is neither a finding nor a
-  diagnostic, so the clean-repository output is byte-identical to Phase 2.
+- `orb-lint: OK` is printed only when there is neither an active finding nor
+  a diagnostic, so the clean-repository output is byte-identical to Phase 2.
+  When the only findings are ignored ones, the line gains a count:
+  `orb-lint: OK (N ignored finding[s])`.
 
 ### Boundary with Phase 2
 
@@ -93,6 +97,6 @@ as a clean repository — and `tests/test_cli.py` records the change explicitly.
 - promoting rules to error severity for enforcement (Phase 5);
 - auto-fix.
 
-`orb_lint/configuration.py` owns the authoritative interpretation of
-`.orb-lint.yml`, including its schema and semantic validation. Every rejection
-it makes surfaces as `INPUT-002`. See `docs/configuration-contract.md`.
+`orb_lint/_configuration.py` (private) owns the authoritative interpretation
+of `.orb-lint.yml`, including its schema and semantic validation. Every
+rejection it makes surfaces as `INPUT-002`. See `docs/configuration-contract.md`.

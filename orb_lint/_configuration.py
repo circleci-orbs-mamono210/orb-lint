@@ -4,9 +4,15 @@ Phase 3-2 / Redmine #5377, under Phase 3 / #5380.
 
 This module owns every interpretation of ``.orb-lint.yml``: parsing, schema
 validation, semantic validation, normalization, ignore matching, and expiry.
-It is public on purpose. A future ``orb-lint-audit`` must import this module
-rather than reimplement any of these semantics; a second interpretation of the
+It is the single authoritative implementation; a second interpretation of the
 same file is a defect, not an optimization.
+
+The module is private (Phase 3-2-1 / #5384). The public contract is the
+meaning of ``.orb-lint.yml`` itself, documented in
+docs/configuration-contract.md, not this module path or its symbols. When
+``orb-lint-audit`` needs the same semantics, Phase 6 will define the narrow
+public facade it requires on top of this module; audit must still never
+reimplement these semantics.
 
 It does not own rule detection, measurement, or exit codes.
 """
@@ -40,6 +46,10 @@ CONFIGURATION_FILENAME: Final = ".orb-lint.yml"
 _TOP_LEVEL_KEYS: Final = frozenset({"ignore"})
 _IGNORE_KEYS: Final = frozenset({"rule", "reason", "path", "expires"})
 _REQUIRED_IGNORE_KEYS: Final = ("rule", "reason")
+
+# Reserved so that a future pattern field can be added without changing the
+# meaning of ``path``. See ADR-004.
+_PATTERN_CHARACTERS: Final = frozenset("*?[")
 
 # Identity format only. Existence is deliberately not checked: a repository may
 # legitimately carry an ignore for a rule this version does not yet implement,
@@ -125,6 +135,14 @@ def _normalize_path(value: Any, index: int) -> str:
     if raw.endswith("/"):
         raise _invalid(
             f"ignore[{index}].path must name a file, not a directory: {raw!r}"
+        )
+    if any(character in raw for character in _PATTERN_CHARACTERS):
+        # ``path`` is an exact match (ADR-004). Rejecting pattern characters
+        # now keeps the door open for an explicit pattern field later; accepting
+        # them as literals would make that addition a silent reinterpretation.
+        raise _invalid(
+            f"ignore[{index}].path is an exact path and must not contain "
+            f"pattern characters (* ? [): {raw!r}"
         )
 
     pure = PurePosixPath(raw)

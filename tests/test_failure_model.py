@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from orb_lint.configuration import CONFIGURATION_FILENAME
+from orb_lint._configuration import CONFIGURATION_FILENAME
 from orb_lint.cli import main
 from orb_lint.failure import (
     EXIT_OK,

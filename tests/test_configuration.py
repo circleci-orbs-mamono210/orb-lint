@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from orb_lint.configuration import (
+from orb_lint._configuration import (
     CONFIGURATION_FILENAME,
     Configuration,
     load_configuration,
@@ -164,3 +164,32 @@ class PathNormalizationTests(ConfigurationLoadTests):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PathPatternCharacterTests(ConfigurationLoadTests):
+    """Phase 3-2-1 / #5384: ``path`` is exact; pattern characters are rejected.
+
+    Accepting ``*`` as a literal today would make a later pattern field a
+    silent reinterpretation of existing files, so the characters are reserved.
+    """
+
+    def _entry(self, path: str) -> str:
+        return (
+            f"ignore:\n"
+            f"  - rule: {RULE_PREFIX}001\n"
+            f"    path: {path!r}\n"
+            f"    reason: r\n"
+        )
+
+    def test_glob_like_paths_are_input_002(self) -> None:
+        for path in ("src/*.yml", ".circleci/?.yml", "src/[ab].yml", "**/x.yml"):
+            with self.subTest(path=path):
+                error = self._reject(self._entry(path))
+                self.assertEqual(
+                    error.diagnostic.diagnostic_id, INPUT_CONFIGURATION
+                )
+                self.assertIn("exact path", error.diagnostic.message)
+
+    def test_ordinary_punctuation_is_still_accepted(self) -> None:
+        configuration = self._load(self._entry("src/@orb.yml"))
+        self.assertEqual(configuration.ignores[0].path, "src/@orb.yml")

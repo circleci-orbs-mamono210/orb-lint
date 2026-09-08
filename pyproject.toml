@@ -7,7 +7,9 @@ name = "orb-lint"
 version = "0.0.1"
 description = "Organization policy linter for circleci-orbs-mamono210 repositories"
 requires-python = ">=3.10"
-dependencies = ["PyYAML>=6.0"]
+# Bounded to the major version verified in CI (Phase 3-2-1 / #5384): a
+# deterministic linter must not change behavior through dependency resolution.
+dependencies = ["PyYAML>=6.0,<7"]
 
 [project.scripts]
 orb-lint = "orb_lint.cli:main"

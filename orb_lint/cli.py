@@ -38,19 +38,35 @@ def _report_operational(error: BaseException) -> int:
     return EXIT_OPERATIONAL
 
 
+def _ignored_suffix(count: int) -> str:
+    if count == 0:
+        return ""
+    noun = "finding" if count == 1 else "findings"
+    return f" ({count} ignored {noun})"
+
+
 def _run(argv: Sequence[str] | None) -> int:
     args = build_parser().parse_args(argv)
     repository = Path(args.repository).resolve()
 
     execution = _run_repository(repository)
-    # Ignored findings are recorded on the result, not enforced or printed.
     findings = execution.active_findings
+    ignored = execution.ignored_findings
 
-    for finding in findings:
+    # Every finding is printed, in evaluation order. Ignoring suppresses
+    # enforcement; it does not hide the finding (Phase 3-2-1 / #5384). A reader
+    # must be able to tell a clean repository from an ignored-only one, and see
+    # why each suppression exists.
+    for result in execution.results:
+        finding = result.finding
         print(
             f"{finding.path}:{finding.line}: "
             f"{finding.rule_id}: {finding.message}"
         )
+        if result.ignore is not None:
+            print(f"  ignored: {result.ignore.reason}")
+            if result.ignore.expires is not None:
+                print(f"  expires: {result.ignore.expires.isoformat()}")
 
     for diagnostic in execution.diagnostics:
         location = f"{diagnostic.path}: " if diagnostic.path else ""
@@ -60,7 +76,9 @@ def _run(argv: Sequence[str] | None) -> int:
         )
 
     if not findings and not execution.diagnostics:
-        print("orb-lint: OK")
+        # The clean-repository line stays byte-identical to Phase 2. Only the
+        # ignored-only case gains a suffix.
+        print(f"orb-lint: OK{_ignored_suffix(len(ignored))}")
 
     # Measurement outcome is deliberately not consulted: a measurement failure
     # must not change the repository-facing result.
